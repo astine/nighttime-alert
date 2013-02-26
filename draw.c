@@ -99,7 +99,10 @@ initdc(void) {
 		fputs("no locale support\n", stderr);
 	if(!(dc = calloc(1, sizeof *dc)))
 		eprintf("cannot malloc %u bytes:", sizeof *dc);
-	if(!(dc->dpy = XOpenDisplay(NULL)))
+
+	//Guess at the display if the env variable is not set.
+	char *displayname = getenv("DISPLAY") == NULL ? ":0" : NULL;
+	if(!(dc->dpy = XOpenDisplay(displayname)))
 		eprintf("cannot open display\n");
 
 	dc->gc = XCreateGC(dc->dpy, DefaultRootWindow(dc->dpy), 0, NULL);
