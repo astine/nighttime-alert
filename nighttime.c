@@ -55,10 +55,13 @@ main(int argc, char *argv[]) {
   int err;
   pthread_t ntid;
 
+  int shutdown_hour = 22;
+  int shutdown_minute = 30;
+
   time_t time_stamp = time(NULL);
   struct tm *time_tm = localtime(&time_stamp);
 
-  while(time_tm->tm_hour < 22 && time_tm->tm_min < 30)
+  while(time_tm->tm_hour < shutdown_hour || time_tm->tm_min < shutdown_minute)
     {
       if (window_open == 0 && last_window_close + MESSAGE_INTERVAL < time(NULL))
 	{
@@ -79,7 +82,7 @@ main(int argc, char *argv[]) {
 	eprintf("cannot display message\n");
     }
   
-  usleep(100);
+  sleep(1);
   system("poweroff");
 
   return 0; 
