@@ -25,7 +25,8 @@
 static void grabkeyboard(void);
 static void releasekeyboard(void);
 static int checkforescape(XKeyEvent *ev);
-static void draw(void);
+static void drawwarning(void);
+static void drawshutdown(void);
 static void *displaymessage(void *arg);
 static void setup(void);
 
@@ -44,6 +45,7 @@ static XIC xic;
 static int window_open = 0;
 static time_t last_window_close = 0;
 
+static void (*draw)(void) = drawwarning;
 static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
 static char *(*fstrstr)(const char *, const char *) = strstr;
 
@@ -68,7 +70,16 @@ main(int argc, char *argv[]) {
       time_stamp = time(NULL);
       time_tm = localtime(&time_stamp);
     }
+
+  draw = drawshutdown;
+  if (window_open == 0)
+    {
+      err = pthread_create(&ntid, NULL, displaymessage, NULL);
+      if (err != 0)
+	eprintf("cannot display message\n");
+    }
   
+  usleep(100);
   system("poweroff");
 
   return 0; 
@@ -114,7 +125,7 @@ void *displaymessage(void *arg)
   return ((void *)0);
 }
 
-void draw(void) {
+void drawwarning(void) {
   const time_t now = time(NULL);
   struct tm *tm = localtime(&now);
   char string[100]; 
@@ -129,6 +140,20 @@ void draw(void) {
   drawtext(dc, "This computer will shutdown at 10:30 PM", normcol);
   dc->y = dc->y+bh;
   drawtext(dc, "Press esc to hide this message...", normcol);
+  mapdc(dc, win, mw, mh);
+}
+
+void drawshutdown(void) {
+  const time_t now = time(NULL);
+  struct tm *tm = localtime(&now);
+  char string[100]; 
+  strftime(string, 100, "It is now %I:%M %p, Shutting down computer.", tm);
+  dc->x = 0;
+  dc->y = 0;
+  drawrect(dc, 0, 0, mw, mh, True, BG(dc, normcol));
+  dc->x = mw/2-(dc->font.width*strlen(string))/2;
+  dc->y = mh/2-(bh/2);
+  drawtext(dc, string, normcol);
   mapdc(dc, win, mw, mh);
 }
 
