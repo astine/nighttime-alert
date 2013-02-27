@@ -6,6 +6,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -19,11 +20,13 @@
 #define MIN(a,b)              ((a) < (b) ? (a) : (b))
 #define MAX(a,b)              ((a) > (b) ? (a) : (b))
 
+#define MESSAGE_INTERVAL 180
+
 static void grabkeyboard(void);
 static void releasekeyboard(void);
 static int checkforescape(XKeyEvent *ev);
 static void draw(void);
-static void displaymessage(void);
+static void *displaymessage(void *arg);
 static void setup(void);
 
 static int bh, mw, mh;
@@ -38,6 +41,8 @@ static unsigned long selcol[ColLast];
 static DC *dc;
 static Window win;
 static XIC xic;
+static int window_open = 0;
+static time_t last_window_close = 0;
 
 static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
 static char *(*fstrstr)(const char *, const char *) = strstr;
@@ -45,12 +50,33 @@ static char *(*fstrstr)(const char *, const char *) = strstr;
 int
 main(int argc, char *argv[]) {
 
-  displaymessage();  
-  return 0; /* unreachable */
+  int err;
+  pthread_t ntid;
+
+  time_t time_stamp = time(NULL);
+  struct tm *time_tm = localtime(&time_stamp);
+
+  while(time_tm->tm_hour < 22 && time_tm->tm_min < 30)
+    {
+      if (window_open == 0 && last_window_close + MESSAGE_INTERVAL < time(NULL))
+	{
+	  err = pthread_create(&ntid, NULL, displaymessage, NULL);
+	  if (err != 0)
+	    eprintf("cannot display message\n");
+	}
+      sleep(1);
+      time_stamp = time(NULL);
+      time_tm = localtime(&time_stamp);
+    }
+  
+  system("poweroff");
+
+  return 0; 
 }
 
-void displaymessage(void)
+void *displaymessage(void *arg)
 {
+  window_open = 1;
   XEvent ev;
   dc = initdc();
   initfont(dc, font);
@@ -70,7 +96,9 @@ void displaymessage(void)
 	{
 	  releasekeyboard();
 	  freedc(dc);
-	  return;
+	  last_window_close = time(NULL);
+	  window_open = 0;
+	  return ((void *)0);
 	}
       break;
     case SelectionNotify:
@@ -83,14 +111,14 @@ void displaymessage(void)
     }
     draw();
   }
+  return ((void *)0);
 }
 
-void
-draw(void) {
+void draw(void) {
   const time_t now = time(NULL);
   struct tm *tm = localtime(&now);
   char string[100]; 
-  strftime(string, 100, "It is %I:%M %p, time for bed.", tm);
+  strftime(string, 100, "It is now %I:%M %p, time for bed.", tm);
   dc->x = 0;
   dc->y = 0;
   drawrect(dc, 0, 0, mw, mh, True, BG(dc, normcol));
@@ -98,8 +126,9 @@ draw(void) {
   dc->y = mh/2-(bh*3/2);
   drawtext(dc, string, normcol);
   dc->y = dc->y+bh;
+  drawtext(dc, "This computer will shutdown at 10:30 PM", normcol);
   dc->y = dc->y+bh;
-  drawtext(dc, "Press esc...", normcol);
+  drawtext(dc, "Press esc to hide this message...", normcol);
   mapdc(dc, win, mw, mh);
 }
 
