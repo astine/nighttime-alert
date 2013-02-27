@@ -32,8 +32,8 @@ drawtext(DC *dc, const char *text, unsigned long col[ColLast]) {
 		if(mn == 0)
 			return;
 	memcpy(buf, text, mn);
-	if(mn < n)
-		for(n = MAX(mn-3, 0); n < mn; buf[n++] = '.');
+	if(mn < n) //Convert last three characters of shortened text to ellipses
+	  for(n = MAX(mn-3, 0); n < mn; buf[n++] = '.');
 
 	drawrect(dc, 0, 0, dc->w, dc->h, True, BG(dc, col));
 	drawtextn(dc, buf, mn, col);
