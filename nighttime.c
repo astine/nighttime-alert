@@ -99,7 +99,7 @@ main(int argc, char *argv[]) {
     }
   
   sleep(1);
-  system("poweroff");
+  system("/usr/bin/systemctl poweroff");
 
   return 0; 
 }
