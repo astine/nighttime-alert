@@ -44,10 +44,11 @@ static Window win;
 static XIC xic;
 static int window_open = 0;
 static time_t last_window_close = 0;
+static struct tm shutdown_tm;
 
 static void (*draw)(void) = drawwarning;
-static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
-static char *(*fstrstr)(const char *, const char *) = strstr;
+//static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
+//static char *(*fstrstr)(const char *, const char *) = strstr;
 
 int
 main(int argc, char *argv[]) {
@@ -55,13 +56,29 @@ main(int argc, char *argv[]) {
   int err;
   pthread_t ntid;
 
-  int shutdown_hour = 22;
-  int shutdown_minute = 30;
+  time_t now = time(NULL);
+  localtime_r(&now, &shutdown_tm);
+  shutdown_tm.tm_hour = 22; //default shutdown hour
+  shutdown_tm.tm_min = 30;  //default shutdown minute
+  shutdown_tm.tm_sec = 0;   //default shutdown minute
 
-  time_t time_stamp = time(NULL);
-  struct tm *time_tm = localtime(&time_stamp);
+  for(int i=0;i<argc;i++)
+    if(!strcmp(argv[i],"-t"))
+      {
+	char *colon = strchr(argv[++i], ':');
+	*colon++ = '\0';
+	shutdown_tm.tm_hour = strtol(argv[i],NULL,10);
+	shutdown_tm.tm_min = strtol(colon,NULL,10);
+      }
 
-  while(time_tm->tm_hour < shutdown_hour || time_tm->tm_min < shutdown_minute)
+  time_t shutdown = mktime(&shutdown_tm);
+  if(difftime(now,shutdown) >= 0)
+    {
+      shutdown = shutdown+86400;
+      localtime_r(&shutdown,&shutdown_tm);
+    }
+
+  while(difftime(now,shutdown) < 0)
     {
       if (window_open == 0 && last_window_close + MESSAGE_INTERVAL < time(NULL))
 	{
@@ -70,8 +87,7 @@ main(int argc, char *argv[]) {
 	    eprintf("cannot display message\n");
 	}
       sleep(1);
-      time_stamp = time(NULL);
-      time_tm = localtime(&time_stamp);
+      now = time(NULL);
     }
 
   draw = drawshutdown;
@@ -139,8 +155,9 @@ void drawwarning(void) {
   dc->x = mw/2-(dc->font.width*strlen(string))/2;
   dc->y = mh/2-(bh*3/2);
   drawtext(dc, string, normcol);
+  strftime(string, 100, "This computer will shutdown at %I:%M %p", &shutdown_tm);
   dc->y = dc->y+bh;
-  drawtext(dc, "This computer will shutdown at 10:30 PM", normcol);
+  drawtext(dc, string, normcol);
   dc->y = dc->y+bh;
   drawtext(dc, "Press esc to hide this message...", normcol);
   mapdc(dc, win, mw, mh);
