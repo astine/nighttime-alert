@@ -98,8 +98,9 @@ main(int argc, char *argv[]) {
 	eprintf("cannot display message\n");
     }
   
-  sleep(1);
+  sleep(2);
   system("/usr/bin/systemctl poweroff");
+  sleep(1);
 
   return 0; 
 }
@@ -122,7 +123,7 @@ void *displaymessage(void *arg)
 	mapdc(dc, win, mw, mh);
       break;
     case KeyPress:
-      if(checkforescape(&ev.xkey))
+      if(checkforescape(&ev.xkey) && draw != drawshutdown)
 	{
 	  releasekeyboard();
 	  freedc(dc);
