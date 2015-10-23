@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <signal.h>
 #include <unistd.h>
 #include <time.h>
 #include <pthread.h>
@@ -99,8 +100,7 @@ main(int argc, char *argv[]) {
     }
   
   sleep(2);
-  system("/usr/bin/systemctl poweroff");
-  sleep(1);
+  kill(1, SIGRTMIN+4);
 
   return 0; 
 }

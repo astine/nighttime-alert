@@ -25,13 +25,13 @@ nighttime: nighttime.o draw.o
 	@${CC} -o $@ nighttime.o draw.o ${LDFLAGS}
 
 install: nighttime
-	@if [ `whoami` = root ]; then \
+	@if [ ! `whoami` = root ]; then \
+        echo Must be root to install; else \
 		echo cp nighttime /usr/local/bin/; \
 		cp nighttime /usr/local/bin/; \
-		echo Place "0 22 * * * /usr/local/bin/nighttime -t 22:30" in crontab to trigger nighttime-alert at 10:00 PM and shutdown the computer at 10:30.; else \
-		echo cp nighttime $$HOME/.bin/; \
-		cp nighttime $$HOME/.bin/; \
-		echo Place "0 22 * * * $$HOME/.bin/nighttime -t 22:30" in crontab to trigger nighttime-alert at 10:00 PM and shutdown the computer at 10:30.; fi
+		chown root:root /usr/local/bin/nighttime; \
+		chmod 6555 /usr/local/bin/nighttime; \
+		echo Place "0 22 * * * /usr/local/bin/nighttime -t 22:30" in crontab to trigger nighttime-alert at 10:00 PM and shutdown the computer at 10:30.; fi
 
 clean:
 	@echo cleaning
